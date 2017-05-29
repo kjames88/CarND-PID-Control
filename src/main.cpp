@@ -28,56 +28,162 @@ std::string hasData(std::string s) {
   return "";
 }
 
+class sTwiddle {
+public:
+  double p[3];
+  double dp[3];
+  int param;
+  int phase;
+  sTwiddle() {
+    for (int i=0; i<3; i++) {
+      p[i] = 0.0;
+      dp[i] = 0.1;
+    }
+    param = 0;
+    phase = 0;
+  }
+};
+
 int main()
 {
   uWS::Hub h;
 
   PID pid = PID();
-  pid.Init(0.2, 0.001, 1.0);
-  
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
-    // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    if (length && length > 2 && data[0] == '4' && data[1] == '2')
-    {
-      auto s = hasData(std::string(data).substr(0, length));
-      if (s != "") {
-        auto j = json::parse(s);
-        std::string event = j[0].get<std::string>();
-        if (event == "telemetry") {
-          // j[1] is the data JSON object
-          double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
 
-          pid.UpdateError(cte);
-          steer_value = pid.getControlResponse();
+  bool do_twiddle = false;
+  sTwiddle twiddle;
+  double best_err = 1.0e6;
+  int t = 0;
+
+  // if (do_twiddle) {
+  //   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
+  // } else {
+  //   pid.Init(0.2, 0.001, 1.0);  // these starting values are good enough to drive around the track
+  // }
+
+  // these starting values are good enough to drive around the track
+  twiddle.p[0] = 0.15;  // 0.40;
+  twiddle.p[1] = 0.006; // 0.0025;
+  twiddle.p[2] = 2.0;   // 3.5;
+  pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
+
+  // For twiddle:
+  //   Run one parameter config until CTE is excessive or 500 steps of simulation
+  //   Reset simulator
+  //   Switch parameter config
+  //   Repeat until sum(twiddle_dp) < 0.2
+  //   Log the parameters
+  //   Exit
+
+  h.onMessage([&pid, do_twiddle, &twiddle, &best_err, &t](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
+      // "42" at the start of the message means there's a websocket message event.
+      // The 4 signifies a websocket message
+      // The 2 signifies a websocket event
+      if (length && length > 2 && data[0] == '4' && data[1] == '2')
+        {
+          auto s = hasData(std::string(data).substr(0, length));
+          if (s != "") {
+            auto j = json::parse(s);
+            std::string event = j[0].get<std::string>();
+            
+            //std::cout << "got ws event '" << event << "'" << std::endl;
+            
+            if (event == "telemetry") {
+              // j[1] is the data JSON object
+              double cte = std::stod(j[1]["cte"].get<std::string>());
+              double speed = std::stod(j[1]["speed"].get<std::string>());
+              double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+              double steer_value;
           
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+              /*
+               * TODO: Calcuate steering value here, remember the steering value is
+               * [-1, 1].
+               * NOTE: Feel free to play around with the throttle and speed. Maybe use
+               * another PID controller to control the speed!
+               */
 
-          json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
-          auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
-          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+              pid.UpdateError(cte);
+              steer_value = pid.getControlResponse();
+          
+              // DEBUG
+              if (false) {
+                std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+              }
+
+              json msgJson;
+              msgJson["steering_angle"] = steer_value;
+              msgJson["throttle"] = 0.3;
+              auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+              if (false) {
+                std::cout << msg << std::endl;
+              }
+              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+              t++;
+              if (do_twiddle) {
+                if (abs(cte) > 2.0 || t == 500) {
+
+                  std::cout << "CTE " << cte << " t " << t << " phase " << twiddle.phase << std::endl;
+                  
+                  if (twiddle.phase == 0) {
+                    if (pid.TotalError() / (double) t < best_err) {
+                      best_err = pid.TotalError() / (double) t;
+                    }
+                    // try p+dp
+                    twiddle.p[twiddle.param] += twiddle.dp[twiddle.param];
+                    twiddle.phase = 1;
+                  } else {
+                    if (pid.TotalError() / (double) t < best_err) {
+                      std::cout << "success!" << std::endl;
+                      best_err = pid.TotalError() / (double) t;
+                      twiddle.dp[twiddle.param] *= 1.1;
+                      
+                      std::cout << "adjust next param" << std::endl;
+                      twiddle.param = (twiddle.param + 1) % 3;
+                      twiddle.p[twiddle.param] += twiddle.dp[twiddle.param];
+                      twiddle.phase = 1;
+                    } else {
+                      if (twiddle.phase == 1) {
+                        // try p-dp
+                        std::cout << "reverse coarse!" << std::endl;
+                        twiddle.p[twiddle.param] -= (2.0 * twiddle.dp[twiddle.param]);
+                        twiddle.phase = 2;
+                      } else {
+                        // reset to previous p
+                        std::cout << "revert" << std::endl;
+                        twiddle.p[twiddle.param] += twiddle.dp[twiddle.param];
+                        twiddle.dp[twiddle.param] *= 0.9;
+
+                        std::cout << "adjust next param" << std::endl;
+                        twiddle.param = (twiddle.param + 1) % 3;
+                        twiddle.p[twiddle.param] += twiddle.dp[twiddle.param];
+                        twiddle.phase = 1;
+                      }
+                    }
+                  }
+                  std::cout << "Reset the simulator (best_err = " << best_err << ")" << std::endl;
+                  std::cout << "Twiddle: " << twiddle.p[0] << ", " << twiddle.p[1] << ", " << twiddle.p[2] << std::endl;
+                  // reset the PID for next round
+                  pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
+                  t = 0;
+                  // reset the simulator for next round
+                  std::string msg = "42[\"reset\",{}]";
+                  ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+                }
+              } else {
+                if (t % 500 == 0) {
+                  std::cout << "Error " << pid.TotalError() / (double) t << std::endl;
+                }
+              }
+            }
+          } else {
+            // Manual driving
+            std::string msg = "42[\"manual\",{}]";
+            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          }
         }
-      } else {
-        // Manual driving
-        std::string msg = "42[\"manual\",{}]";
-        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-      }
-    }
-  });
+    });
 
   // We don't need this since we're not using HTTP but if it's removed the program
   // doesn't compile :-(

@@ -41,6 +41,13 @@ public:
   double Kp_;
   double Ki_;
   double Kd_;
+
+  /*
+   * Twiddle
+   */
+
+  double twiddle_dp_[3];
+  int twiddle_phase_[3];
   
   /*
   * Errors
@@ -49,7 +56,12 @@ public:
   double i_error_;
   double d_error_;
 
+  bool initialized_;
+  bool primed_;
+  double cte_q_;
+  double cte_int_;
   double control_response_;
+  double error_squared_;
 
 };
 

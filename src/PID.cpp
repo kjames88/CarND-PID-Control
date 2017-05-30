@@ -1,5 +1,6 @@
 #include "PID.h"
 #include <assert.h>
+#include <iostream>
 
 using namespace std;
 
@@ -45,6 +46,8 @@ void PID::UpdateError(double cte) {
   cte_q_ = cte;     // prev for derivative
   control_response_ = (-Kp_ * cte) - (Ki_ * cte_int_) - (Kd_ * d_cte);
 
+  //  std::cout << "cte = " << cte << " cte_int = " << cte_int_ << " control = " << control_response_ << std::endl;
+  
   // if we get here we're probably already off the track anyway
   if (control_response_ < -1.0)
     control_response_ = -1.0;

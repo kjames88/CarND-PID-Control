@@ -62,9 +62,9 @@ int main()
   // }
 
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.15;  // 0.40;
-  twiddle.p[1] = 0.006; // 0.0025;
-  twiddle.p[2] = 2.0;   // 3.5;
+  twiddle.p[0] = 0.20;  // 0.15;
+  twiddle.p[1] = 0.006;  // 0.006;
+  twiddle.p[2] = 2.0;  // 2.0;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
   // For twiddle:
@@ -172,7 +172,7 @@ int main()
                   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
               } else {
-                if (t % 500 == 0) {
+                if (t % 50 == 0) {
                   std::cout << "Error " << pid.TotalError() / (double) t << std::endl;
                 }
               }

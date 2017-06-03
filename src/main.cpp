@@ -49,6 +49,7 @@ int main()
   uWS::Hub h;
 
   PID pid = PID();
+  PID pid_throttle = PID();
 
   bool do_twiddle = false;
   sTwiddle twiddle;
@@ -62,10 +63,12 @@ int main()
   // }
 
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.20;  // 0.15;
-  twiddle.p[1] = 0.006;  // 0.006;
-  twiddle.p[2] = 2.0;  // 2.0;
+  twiddle.p[0] = 0.15;  // 0.15;
+  twiddle.p[1] = 0.008;  // 0.006;
+  twiddle.p[2] = 2.5;  // 2.0;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
+
+  pid_throttle.Init(0.2, 0.0, 1.0);
 
   // For twiddle:
   //   Run one parameter config until CTE is excessive or 500 steps of simulation
@@ -75,7 +78,7 @@ int main()
   //   Log the parameters
   //   Exit
 
-  h.onMessage([&pid, do_twiddle, &twiddle, &best_err, &t](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid, &pid_throttle, do_twiddle, &twiddle, &best_err, &t](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
       // "42" at the start of the message means there's a websocket message event.
       // The 4 signifies a websocket message
@@ -87,7 +90,7 @@ int main()
             auto j = json::parse(s);
             std::string event = j[0].get<std::string>();
             
-            //std::cout << "got ws event '" << event << "'" << std::endl;
+            //std::cout << "got json '" << j << "'" << std::endl;
             
             if (event == "telemetry") {
               // j[1] is the data JSON object
@@ -105,15 +108,30 @@ int main()
 
               pid.UpdateError(cte);
               steer_value = pid.getControlResponse();
-          
+
+              // Speed regulation; minimum speed setting 10MPH so the car doesn't stall
+              double target_speed = 50.0;
+              double cte_int = abs(pid.getCTE_Int());
+              cte_int = cte_int > (target_speed - 10.0) ? (target_speed - 10.0) : cte_int;
+              target_speed -= cte_int;
+
+              pid_throttle.UpdateError(speed - target_speed);
+              double throttle_value = pid_throttle.getControlResponse();
+              throttle_value = 0.5 + (0.5 * throttle_value);  // range 0.0 - 1.0
+
+              std::cout << "target " << target_speed << " throttle " << throttle_value << std::endl;
+              
+              //double extra_throttle = 0.3 * pow(1.0 - abs(steer_value), 2);
+              
               // DEBUG
               if (false) {
+                std::cout << "speed " << speed << " ";
                 std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
               }
 
               json msgJson;
               msgJson["steering_angle"] = steer_value;
-              msgJson["throttle"] = 0.3;
+              msgJson["throttle"] = throttle_value;  // 0.3 + extra_throttle;
               auto msg = "42[\"steer\"," + msgJson.dump() + "]";
               if (false) {
                 std::cout << msg << std::endl;

@@ -33,6 +33,11 @@ public:
    */
   double getControlResponse() {return control_response_;}
 
+  /*
+   * Get the integration error term
+   */
+  double getCTE_Int() {return i_error_;}
+
  private:
 
   /*
@@ -59,7 +64,6 @@ public:
   bool initialized_;
   bool primed_;
   double cte_q_;
-  double cte_int_;
   double control_response_;
   double error_squared_;
 

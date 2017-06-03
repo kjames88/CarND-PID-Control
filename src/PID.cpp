@@ -24,7 +24,6 @@ void PID::Init(double Kp, double Ki, double Kd) {
   i_error_ = 0.0;
   d_error_ = 0.0;
   cte_q_ = 0.0;
-  cte_int_ = 0.0;
   control_response_ = 0.0;
   error_squared_ = 0.0;
   primed_ = false;
@@ -42,11 +41,11 @@ void PID::UpdateError(double cte) {
   }
   
   double d_cte = cte - cte_q_;
-  cte_int_ += cte;  // integral
+  i_error_ += cte;  // integral
   cte_q_ = cte;     // prev for derivative
-  control_response_ = (-Kp_ * cte) - (Ki_ * cte_int_) - (Kd_ * d_cte);
+  control_response_ = (-Kp_ * cte) - (Ki_ * i_error_) - (Kd_ * d_cte);
 
-  //  std::cout << "cte = " << cte << " cte_int = " << cte_int_ << " control = " << control_response_ << std::endl;
+  //  std::cout << "cte = " << cte << " i_error = " << i_error_ << " control = " << control_response_ << std::endl;
   
   // if we get here we're probably already off the track anyway
   if (control_response_ < -1.0)

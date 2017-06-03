@@ -63,9 +63,9 @@ int main()
   // }
 
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.15;  // 0.15;
+  twiddle.p[0] = 0.11;  // 0.15;
   twiddle.p[1] = 0.008;  // 0.006;
-  twiddle.p[2] = 2.5;  // 2.0;
+  twiddle.p[2] = 1.5;  // 2.0;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
   pid_throttle.Init(0.2, 0.0, 1.0);
@@ -110,10 +110,10 @@ int main()
               steer_value = pid.getControlResponse();
 
               // Speed regulation; minimum speed setting 10MPH so the car doesn't stall
-              double target_speed = 50.0;
+              double target_speed = 45.0;
               double cte_int = abs(pid.getCTE_Int());
-              cte_int = cte_int > (target_speed - 10.0) ? (target_speed - 10.0) : cte_int;
-              target_speed -= cte_int;
+              target_speed -= (1.4 * cte_int);
+              target_speed = (target_speed < 10.0) ? 10.0 : target_speed;
 
               pid_throttle.UpdateError(speed - target_speed);
               double throttle_value = pid_throttle.getControlResponse();

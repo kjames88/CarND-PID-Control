@@ -51,7 +51,7 @@ int main(int argc, char** argv)
   PID pid = PID();
   PID pid_throttle = PID();
 
-  double target_speed = 50.0;
+  double target_speed = 45.0;
   bool do_twiddle = false;
   sTwiddle twiddle;
   double best_err = 1.0e6;
@@ -64,9 +64,9 @@ int main(int argc, char** argv)
   }
   
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.11;  // 0.15;
-  twiddle.p[1] = 0.006;  // 0.006;
-  twiddle.p[2] = 1.5;  // 2.0;
+  twiddle.p[0] = 0.075;
+  twiddle.p[1] = 0.0085;
+  twiddle.p[2] = 1.1;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
   pid_throttle.Init(0.2, 0.0, 1.0);

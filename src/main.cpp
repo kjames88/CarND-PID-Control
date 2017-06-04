@@ -64,9 +64,9 @@ int main(int argc, char** argv)
   }
   
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.075;
-  twiddle.p[1] = 0.0085;
-  twiddle.p[2] = 1.1;
+  twiddle.p[0] = 0.08;
+  twiddle.p[1] = 0.007;
+  twiddle.p[2] = 1.0;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
   pid_throttle.Init(0.2, 0.0, 1.0);

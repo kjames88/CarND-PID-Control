@@ -44,27 +44,28 @@ public:
   }
 };
 
-int main()
+int main(int argc, char** argv)
 {
   uWS::Hub h;
 
   PID pid = PID();
   PID pid_throttle = PID();
 
+  double target_speed = 50.0;
   bool do_twiddle = false;
   sTwiddle twiddle;
   double best_err = 1.0e6;
   int t = 0;
 
-  // if (do_twiddle) {
-  //   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
-  // } else {
-  //   pid.Init(0.2, 0.001, 1.0);  // these starting values are good enough to drive around the track
-  // }
-
+  if (argc > 1) {
+    int s = atoi(argv[1]);
+    target_speed = (double) s;
+    std::cout << "Set speed target to " << target_speed << " MPH" << std::endl;
+  }
+  
   // these starting values are good enough to drive around the track
   twiddle.p[0] = 0.11;  // 0.15;
-  twiddle.p[1] = 0.008;  // 0.006;
+  twiddle.p[1] = 0.006;  // 0.006;
   twiddle.p[2] = 1.5;  // 2.0;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
@@ -78,7 +79,7 @@ int main()
   //   Log the parameters
   //   Exit
 
-  h.onMessage([&pid, &pid_throttle, do_twiddle, &twiddle, &best_err, &t](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&pid, &pid_throttle, target_speed, do_twiddle, &twiddle, &best_err, &t](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
       // "42" at the start of the message means there's a websocket message event.
       // The 4 signifies a websocket message
@@ -110,28 +111,24 @@ int main()
               steer_value = pid.getControlResponse();
 
               // Speed regulation; minimum speed setting 10MPH so the car doesn't stall
-              double target_speed = 45.0;
               double cte_int = abs(pid.getCTE_Int());
-              target_speed -= (1.4 * cte_int);
-              target_speed = (target_speed < 10.0) ? 10.0 : target_speed;
+              double pid_speed = target_speed - (1.4 * cte_int);
+              pid_speed = (pid_speed < 10.0) ? 10.0 : pid_speed;
 
-              pid_throttle.UpdateError(speed - target_speed);
+              pid_throttle.UpdateError(speed - pid_speed);
               double throttle_value = pid_throttle.getControlResponse();
               throttle_value = 0.5 + (0.5 * throttle_value);  // range 0.0 - 1.0
-
-              std::cout << "target " << target_speed << " throttle " << throttle_value << std::endl;
-              
-              //double extra_throttle = 0.3 * pow(1.0 - abs(steer_value), 2);
               
               // DEBUG
               if (false) {
+                std::cout << "target " << pid_speed << " throttle " << throttle_value << std::endl;
                 std::cout << "speed " << speed << " ";
                 std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
               }
 
               json msgJson;
               msgJson["steering_angle"] = steer_value;
-              msgJson["throttle"] = throttle_value;  // 0.3 + extra_throttle;
+              msgJson["throttle"] = throttle_value;
               auto msg = "42[\"steer\"," + msgJson.dump() + "]";
               if (false) {
                 std::cout << msg << std::endl;
@@ -190,8 +187,10 @@ int main()
                   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
               } else {
-                if (t % 50 == 0) {
-                  std::cout << "Error " << pid.TotalError() / (double) t << std::endl;
+                if (false) {
+                  if (t % 50 == 0) {
+                    std::cout << "Error " << pid.TotalError() / (double) t << std::endl;
+                  }
                 }
               }
             }

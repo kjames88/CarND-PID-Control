@@ -48,13 +48,6 @@ public:
   double Kd_;
 
   /*
-   * Twiddle
-   */
-
-  double twiddle_dp_[3];
-  int twiddle_phase_[3];
-  
-  /*
   * Errors
   */
   double p_error_;

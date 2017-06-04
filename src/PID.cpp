@@ -16,10 +16,6 @@ void PID::Init(double Kp, double Ki, double Kd) {
   Kp_ = Kp;
   Ki_ = Ki;
   Kd_ = Kd;
-  for (int i=0; i<3; i++) {
-    twiddle_dp_[i] = 1.0;
-    twiddle_phase_[i] = 0;
-  }
   p_error_ = 0.0;
   i_error_ = 0.0;
   d_error_ = 0.0;

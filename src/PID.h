@@ -25,13 +25,14 @@ public:
 
   /*
   * Calculate the total PID error.
+  * Returns the control response
   */
   double TotalError();
 
   /*
-   * Get the control response
+   * Return the total error (sum of squared error)
    */
-  double getControlResponse() {return control_response_;}
+  double SumError() {return error_squared_;}
 
   /*
    * Get the integration error term

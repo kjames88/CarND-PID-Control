@@ -30,29 +30,24 @@ void PID::UpdateError(double cte) {
   assert(initialized_);
   if (primed_ == false) {
     cte_q_ = cte;
-    p_error_ = cte;
-    i_error_ = cte;
-    d_error_ = cte;
     primed_ = true;
   }
-  
-  double d_cte = cte - cte_q_;
+  p_error_ = cte;
+  d_error_ = cte - cte_q_;
   i_error_ += cte;  // integral
   cte_q_ = cte;     // prev for derivative
-  control_response_ = (-Kp_ * cte) - (Ki_ * i_error_) - (Kd_ * d_cte);
+}
 
-  //  std::cout << "cte = " << cte << " i_error = " << i_error_ << " control = " << control_response_ << std::endl;
-  
+double PID::TotalError() {
+  control_response_ = (-Kp_ * p_error_) - (Ki_ * i_error_) - (Kd_ * d_error_);
+
   // if we get here we're probably already off the track anyway
   if (control_response_ < -1.0)
     control_response_ = -1.0;
   else if (control_response_ > 1.0)
     control_response_ = 1.0;
 
-  error_squared_ += (cte * cte);
-}
-
-double PID::TotalError() {
-  return error_squared_;
+  error_squared_ += (p_error_ * p_error_);
+  return control_response_;
 }
 

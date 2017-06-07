@@ -60,13 +60,13 @@ int main(int argc, char** argv)
   if (argc > 1) {
     int s = atoi(argv[1]);
     target_speed = (double) s;
-    std::cout << "Set speed target to " << target_speed << " MPH" << std::endl;
   }
+  std::cout << "Set speed target to " << target_speed << " MPH" << std::endl;
   
   // these starting values are good enough to drive around the track
-  twiddle.p[0] = 0.08;
-  twiddle.p[1] = 0.007;
-  twiddle.p[2] = 1.0;
+  twiddle.p[0] = 0.11;
+  twiddle.p[1] = 0.006;
+  twiddle.p[2] = 1.5;
   pid.Init(twiddle.p[0], twiddle.p[1], twiddle.p[2]);
 
   pid_throttle.Init(0.2, 0.0, 1.0);
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
                */
 
               pid.UpdateError(cte);
-              steer_value = pid.getControlResponse();
+              steer_value = pid.TotalError();
 
               // Speed regulation; minimum speed setting 10MPH so the car doesn't stall
               double cte_int = abs(pid.getCTE_Int());
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
               pid_speed = (pid_speed < 10.0) ? 10.0 : pid_speed;
 
               pid_throttle.UpdateError(speed - pid_speed);
-              double throttle_value = pid_throttle.getControlResponse();
+              double throttle_value = pid_throttle.TotalError();
               throttle_value = 0.5 + (0.5 * throttle_value);  // range 0.0 - 1.0
               
               // DEBUG
@@ -142,16 +142,16 @@ int main(int argc, char** argv)
                   std::cout << "CTE " << cte << " t " << t << " phase " << twiddle.phase << std::endl;
                   
                   if (twiddle.phase == 0) {
-                    if (pid.TotalError() / (double) t < best_err) {
-                      best_err = pid.TotalError() / (double) t;
+                    if (pid.SumError() / (double) t < best_err) {
+                      best_err = pid.SumError() / (double) t;
                     }
                     // try p+dp
                     twiddle.p[twiddle.param] += twiddle.dp[twiddle.param];
                     twiddle.phase = 1;
                   } else {
-                    if (pid.TotalError() / (double) t < best_err) {
+                    if (pid.SumError() / (double) t < best_err) {
                       std::cout << "success!" << std::endl;
-                      best_err = pid.TotalError() / (double) t;
+                      best_err = pid.SumError() / (double) t;
                       twiddle.dp[twiddle.param] *= 1.1;
                       
                       std::cout << "adjust next param" << std::endl;
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
               } else {
                 if (false) {
                   if (t % 50 == 0) {
-                    std::cout << "Error " << pid.TotalError() / (double) t << std::endl;
+                    std::cout << "Error " << pid.SumError() / (double) t << std::endl;
                   }
                 }
               }

@@ -30,6 +30,14 @@ Key to successful operation of a PID controller is good selection of the weights
 
 I wanted to see what twiddle would do so I spent some hours manually applying twiddle adjustments.  This painful process did reveal a surprise early success long before the *I* parameter magnitude was reduced to a usable level, but targeted in the same realm as my quickly selected manually tuned parameters.  I did not continue to very high resolution, which might have accomplished greater refinement, because the process is quite tedious without automation.
 
-The final parameters were tuned manually.  **The parameters also had to be re-tuned after upgrading the simulator to the latest version since the response was significantly different.**
+The final parameters were tuned manually.
 
+###Testing Results###
+
+**The simulator version matters**
+
+The controller can be started with a speed target parameter:  *./pid 50* increases the target from the default of 45MPH to 50MPH.  Using the simulator from 1-2 weeks ago (single mode with two tracks available) the car goes off the track at 70-75MPH.  At 65MPH the steering oscillates considerably but the car stays on the track.  Up to 55MPH the driving should be "safe."
+
+The v1.3 simulator drives reasonably well at 50MPH, whereas the v1.4 simulator oscillates too much, but stays on the track.  Overall, the current parameters, which are tuned for the older simulator, are too strong for the v1.4 and possibly also for the v1.3 simulators.  I had previously reduced the parameters for v1.4 but that may result in inadequate control response on the older simulator.
+   
 
